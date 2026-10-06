@@ -17,11 +17,11 @@ export type Staff = {
 };
 
 export const STAFF: Staff[] = [
-  { id: "fd", name: "Kavya R.", role: "Registration desk · front office", cls: "frontdesk", centres: ["CHN"] },
+  { id: "fd", name: "Kavya R.", role: "Registration desk · front office", cls: "frontdesk", centres: ["CHN", "BLR"] },
   { id: "mk", name: "Dr. Meera Krishnan", role: "Consultant vascular surgeon · Head of service", cls: "consultant", centres: ["CHN", "BLR", "HYD"], head: true, quals: "MS, MCh (Vascular Surgery)", reg: "TNMC 64218 (demo)" },
   { id: "an", name: "Dr. Arun Nair", role: "Consultant vascular surgeon", cls: "consultant", centres: ["CHN", "BLR", "HYD"], quals: "MS, DNB (Vascular Surgery)", reg: "TCMC 51377 (demo)" },
-  { id: "nb", name: "Dr. Neha Bose", role: "Senior house officer", cls: "trainee", centres: ["CHN"], quals: "MBBS", reg: "TNMC 99802 (demo)" },
-  { id: "rv", name: "Sr. Revathi S.", role: "OPD assessment nurse", cls: "nurse", centres: ["CHN"] },
+  { id: "nb", name: "Dr. Neha Bose", role: "Senior house officer", cls: "trainee", centres: ["CHN", "BLR"], quals: "MBBS", reg: "TNMC 99802 (demo)" },
+  { id: "rv", name: "Sr. Revathi S.", role: "OPD assessment nurse", cls: "nurse", centres: ["CHN", "BLR"] },
   { id: "ak", name: "Sr. Anandhi K.", role: "Senior staff nurse", cls: "nurse", centres: ["CHN"] },
   { id: "jm", name: "Sr. Josephine M.", role: "Nurse practitioner", cls: "nurse", centres: ["HYD"] },
   { id: "rs", name: "R. Subramanian", role: "Data custodian", cls: "custodian", centres: ["CHN", "BLR", "HYD"] },
@@ -32,7 +32,7 @@ export const STAFF: Staff[] = [
 export const staffById = (id: string) => STAFF.find((s) => s.id === id) ?? STAFF[0];
 
 export type Screen =
-  | "register" | "triage" | "consult" | "checkout" | "flow" | "admit" | "services" | "overview" | "round" | "patient" | "visit" | "nurse" | "profile" | "signoff" | "wound"
+  | "register" | "triage" | "consult" | "checkout" | "flow" | "admit" | "services" | "rdocs" | "overview" | "round" | "patient" | "visit" | "nurse" | "profile" | "signoff" | "wound"
   | "research" | "graph" | "audit" | "auto" | "arch" | "requirements";
 
 const ALLOW: Record<Screen, Cls[] | "all"> = {
@@ -43,6 +43,7 @@ const ALLOW: Record<Screen, Cls[] | "all"> = {
   flow: ["frontdesk", "nurse", "consultant", "trainee"],
   admit: ["frontdesk", "nurse", "consultant", "trainee"],
   services: ["nurse", "consultant", "trainee"],
+  rdocs: ["consultant", "trainee", "research", "custodian"],
   overview: ["consultant"],
   round: ["consultant", "trainee", "nurse"],
   patient: ["consultant", "trainee", "nurse"],

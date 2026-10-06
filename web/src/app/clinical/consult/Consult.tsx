@@ -14,6 +14,7 @@ import { Guard, Top, useMe } from "@/components/cx/Shell";
 import { Card, Kpis, Modal, NewsBadge, Pill, toast } from "@/components/cx/ui";
 import { SIGN } from "@/lib/cx/data";
 import { ABX, DX, RISK, abiBand, alerts, num, renalAlerts, suggestOrders, treatmentAlerts, type Alert } from "@/lib/cx/consult";
+import { currentLocation, hereRegs, placeAt } from "@/lib/cx/locations";
 import { audit, contentHash, setState, uid, updateReg, useStore, type ConsultRecord, type Limb, type Registration, type TriageRecord } from "@/lib/cx/store";
 import type { Staff } from "@/lib/cx/users";
 import { blank, derive, fromDraft, type C, type WoundF } from "./model";
@@ -51,7 +52,7 @@ export function Consult() {
   return (
     <Guard screen="consult">
       <Top title="Doctor consultation" sub="Step 3 · nursing assessment → history → examination → every wound → treatment today → diagnosis and orders → medicines → discussion and consent → plan and sign" />
-      <Body />
+      <div className="wrap"><Body /></div>
     </Guard>
   );
 }
@@ -67,7 +68,8 @@ function Body() {
   const [c, setC] = useState<C | null>(null);
   const [record, setRecord] = useState<string | null>(null);
 
-  const regs = st.registrations.filter((r) => me.centres.includes(r.centre as never));
+  const here = currentLocation(st, me);
+  const regs = hereRegs(st, me);
   const due = (r: Registration) => Date.parse(r.triage?.at ?? r.at) + (TARGET_MIN[r.triage?.category ?? "Routine"] ?? 120) * 60000;
   const ready = regs.filter((r) => r.status === "ready for doctor" && r.triage)
     .sort((a, b) => CAT_RANK[a.triage!.category] - CAT_RANK[b.triage!.category] || due(a) - due(b));
@@ -107,7 +109,7 @@ function Body() {
   }
 
   function seedDemo() {
-    setState((s) => ({ registrations: [...demoAssessed(me.centres[0]), ...s.registrations] }));
+    setState((s) => ({ registrations: [...placeAt(demoAssessed(here.centre), here.id), ...s.registrations] }));
     toast("Three assessed patients added to Ready for doctor.");
   }
 
@@ -187,8 +189,8 @@ function Body() {
             <table className="t"><tbody>
               {atTests.map((x) => (
                 <tr key={x.id}><td className="num sm" style={{ whiteSpace: "nowrap" }}><b>{x.token}</b></td><td className="sm"><b>{x.name}</b><div className="xs mut">{((x.consultDraft as unknown as C | undefined)?.orders ?? []).join(", ") || "tests"}</div></td>
-                  <td className="xs mut">{minsSince(x.testsAt)} min</td>
-                  <td style={{ textAlign: "right" }}><button className="btn sm" onClick={() => backFromTests(x)}>Results back</button></td></tr>
+                  <td className="xs mut" style={{ whiteSpace: "nowrap" }}>{minsSince(x.testsAt)} min</td>
+                  <td style={{ textAlign: "right", whiteSpace: "nowrap" }}><button className="btn sm" onClick={() => backFromTests(x)}>Results back</button></td></tr>
               ))}
             </tbody></table>
           )}

@@ -10,14 +10,15 @@ export const UNITS = [
 ] as const;
 
 /** Who is in each Chennai bed now: the ward fixture (with transfers/discharges) plus admissions from OPD. */
-export function occupancy(st: Pick<State, "adt" | "registrations">): Record<string, { name: string; from: "ward" | "opd" }> {
+export function occupancy(st: Pick<State, "adt" | "registrations">, location = "CHN-GR"): Record<string, { name: string; from: "ward" | "opd" }> {
   const out: Record<string, { name: string; from: "ward" | "opd" }> = {};
-  for (const r of NET.roster.filter((x) => x.site === "CHN")) {
+  // The ward fixture is the Greams Road (Chennai) in-patient list; other locations start from their own admissions.
+  for (const r of location === "CHN-GR" ? NET.roster.filter((x) => x.site === "CHN") : []) {
     const a = st.adt[r.id];
     if (a?.discharged) continue;
     out[a?.bed ?? r.bed] = { name: r.name, from: "ward" };
   }
-  for (const r of st.registrations) if (r.status === "admitted" && r.admission) out[r.admission.bed] = { name: r.name, from: "opd" };
+  for (const r of st.registrations) if (r.status === "admitted" && r.admission && (r.location ?? "CHN-GR") === location) out[r.admission.bed] = { name: r.name, from: "opd" };
   return out;
 }
 

@@ -12,6 +12,7 @@ import { Guard, Top, useMe } from "@/components/cx/Shell";
 import { Card, Kpis, Pill, toast } from "@/components/cx/ui";
 import { EDUCATION, HBOT_ABSOLUTE, HBOT_CHECKS, HBOT_INDICATIONS, HBOT_RELATIVE, RESULT_FORMS, hbotGates, resultComplete } from "@/lib/cx/services";
 import { demoAssessed } from "@/app/clinical/consult/Consult";
+import { currentLocation, hereRegs, placeAt } from "@/lib/cx/locations";
 import { audit, setState, uid, useStore, type ConsultRecord, type ProcedureRecord, type Registration, type TestResult } from "@/lib/cx/store";
 import { STAFF, type Staff } from "@/lib/cx/users";
 
@@ -24,7 +25,7 @@ export function Services() {
   return (
     <Guard screen="services">
       <Top title="Tests & procedures" sub="Step 4B · results desk for patients at tests → back to the doctor · dressing room and HBOT assessment → checkout" />
-      <Body />
+      <div className="wrap"><Body /></div>
     </Guard>
   );
 }
@@ -34,7 +35,8 @@ function Body() {
   const st = useStore();
   const [tab, setTab] = useState<"results" | "room">("results");
   const [sel, setSel] = useState<string | null>(null);
-  const regs = st.registrations.filter((r) => me.centres.includes(r.centre as never));
+  const here = currentLocation(st, me);
+  const regs = hereRegs(st, me);
   const atTests = regs.filter((r) => r.status === "at tests").sort((a, b) => (a.testsAt ?? "").localeCompare(b.testsAt ?? ""));
   const forProc = regs.filter((r) => r.status === "for procedure" && r.consult);
   const critical = atTests.flatMap((r) => (r.results ?? []).filter((x) => x.critical && !x.informed));
@@ -42,7 +44,7 @@ function Body() {
   const r = list.find((x) => x.id === sel) ?? null;
 
   function seed() {
-    setState((s) => ({ registrations: [...demoAtTests(me.centres[0]), ...demoForProcedure(me.centres[0]), ...s.registrations] }));
+    setState((s) => ({ registrations: [...placeAt([...demoAtTests(here.centre), ...demoForProcedure(here.centre)], here.id), ...s.registrations] }));
     toast("Demo patients added: two at tests, two for the dressing room.");
   }
 

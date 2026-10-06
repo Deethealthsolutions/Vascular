@@ -13,6 +13,7 @@ import {
 } from "@/lib/cx/checkout";
 import { demoAssessed } from "@/app/clinical/consult/Consult";
 import { ORDERS } from "@/lib/cx/consult";
+import { currentLocation, hereRegs, placeAt } from "@/lib/cx/locations";
 import { audit, setState, uid, useStore, type CheckoutRecord, type ConsultRecord, type Registration } from "@/lib/cx/store";
 import { STAFF, type Staff } from "@/lib/cx/users";
 
@@ -26,7 +27,7 @@ export function Checkout() {
   return (
     <Guard screen="checkout">
       <Top title="Checkout" sub="Step 4 · next appointment → visit summary and prescription → letter to the referring doctor → home care → bill and payment" />
-      <Body />
+      <div className="wrap"><Body /></div>
     </Guard>
   );
 }
@@ -36,14 +37,15 @@ function Body() {
   const st = useStore();
   const [sel, setSel] = useState<string | null>(null);
   const [view, setView] = useState<string | null>(null);
-  const regs = st.registrations.filter((r) => me.centres.includes(r.centre as never));
+  const here = currentLocation(st, me);
+  const regs = hereRegs(st, me);
   const queue = regs.filter((r) => r.status === "to checkout" && r.consult).sort((a, b) => a.consult!.at.localeCompare(b.consult!.at));
   const done = regs.filter((r) => r.status === "checked out" && r.checkout).sort((a, b) => b.checkout!.at.localeCompare(a.checkout!.at));
   const r = queue.find((x) => x.id === sel) ?? null;
   const collected = done.reduce((a, x) => a + (x.checkout!.bill.mode.startsWith("Credit") || x.checkout!.bill.mode.startsWith("Waived") ? 0 : x.checkout!.bill.payable), 0);
 
   function seed() {
-    setState((s) => ({ registrations: [...demoConsulted(me.centres[0]), ...s.registrations] }));
+    setState((s) => ({ registrations: [...placeAt(demoConsulted(here.centre), here.id), ...s.registrations] }));
     toast("Three patients seen by the doctor added to the checkout queue.");
   }
 

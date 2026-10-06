@@ -11,6 +11,7 @@ import { Card, Kpis, Modal, Pill, toast } from "@/components/cx/ui";
 import { SignaturePad } from "@/components/staff/SignaturePad";
 import { DIETS, PACKAGES, PROCEDURES, UNITS, URGENCY, inr, occupancy, payerKind, suggestFromConsult } from "@/lib/cx/admit";
 import { demoAssessed } from "@/app/clinical/consult/Consult";
+import { currentLocation, hereRegs, placeAt } from "@/lib/cx/locations";
 import { audit, setState, uid, useStore, type AdmissionRecord, type ConsultRecord, type Registration } from "@/lib/cx/store";
 import { STAFF, type Staff } from "@/lib/cx/users";
 
@@ -22,7 +23,7 @@ export function Admit() {
   return (
     <Guard screen="admit">
       <Top title="Admission" sub="Step 4C · admission details → financial clearance → bed → consent and documents → handover to the ward" />
-      <Body />
+      <div className="wrap"><Body /></div>
     </Guard>
   );
 }
@@ -32,15 +33,16 @@ function Body() {
   const st = useStore();
   const [sel, setSel] = useState<string | null>(null);
   const [view, setView] = useState<string | null>(null);
-  const regs = st.registrations.filter((r) => me.centres.includes(r.centre as never));
+  const here = currentLocation(st, me);
+  const regs = hereRegs(st, me);
   const queue = regs.filter((r) => r.status === "awaiting admission" && r.consult).sort((a, b) => a.consult!.at.localeCompare(b.consult!.at));
   const done = regs.filter((r) => r.status === "admitted" && r.admission);
-  const occ = occupancy(st);
+  const occ = occupancy(st, here.id);
   const free = (u: (typeof UNITS)[number]) => u.beds.filter((b) => !occ[b]).length;
   const r = queue.find((x) => x.id === sel) ?? null;
 
   function seed() {
-    setState((s) => ({ registrations: [...demoForAdmission(me.centres[0]), ...s.registrations] }));
+    setState((s) => ({ registrations: [...placeAt(demoForAdmission(here.centre), here.id), ...s.registrations] }));
     toast("Three patients the doctor decided to admit added to the queue.");
   }
 

@@ -53,6 +53,8 @@ export type ExtractReq = {
 export type Registration = {
   id: string; epi: string; mrn: string; token: string; queue: string; queueLabel: string;
   priority: "emergency" | "priority" | "routine"; at: string; by: string; centre: string;
+  /** Clinic location (lib/cx/locations.ts); older records fall back to their centre's first location. */
+  location?: string;
   returning: boolean; pid?: string; emergencyQuick: boolean;
   name: string; age: number; ageApprox: boolean; dob?: string; sex: string;
   phone: string; phoneVerified: boolean; language: string;
@@ -198,6 +200,8 @@ export type State = {
   woundPhotos: Record<string, WoundPhoto[]>;
   /** Clinic appointment book (follow-ups booked at checkout). */
   appointments: Appointment[];
+  /** Clinic location the signed-in staff member is working at (sidebar "Working at"). */
+  location: string;
   hydrated: boolean;
 };
 
@@ -205,7 +209,7 @@ const KEY = "prototype.clinical.v1";
 
 const initial: State = {
   user: "mk", obs: [], pending: [], resolved: {}, ledger: [], notes: [], merges: [], adt: {},
-  attendance: {}, audit: [], extracts: [], registrations: [], woundPhotos: {}, appointments: [], hydrated: false,
+  attendance: {}, audit: [], extracts: [], registrations: [], woundPhotos: {}, appointments: [], location: "CHN-GR", hydrated: false,
 };
 
 let state: State = initial;

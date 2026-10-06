@@ -75,6 +75,30 @@ This document records how a patient moves through the hospital in the prototype:
 
 Every change of status is written to the registration's **history** and to the **Access audit** log with the staff member's name and time.
 
+### Locations
+
+The network runs several clinic locations, listed in `web/src/lib/cx/locations.ts`:
+
+| Location | City | Centre |
+|---|---|---|
+| Greams Road | Chennai | CHN (holds the ward fixture and bed board) |
+| HSR Layout | Bengaluru | BLR |
+| Rajajinagar | Bengaluru | BLR |
+| Mysuru | Mysuru | BLR |
+
+Choosing a location:
+- Staff pick where they are working with **Working at** in the sidebar. Only locations whose centre is in their scope are offered.
+- Every journey screen (registration, nursing assessment, consultation, checkout, tests & procedures, admission) and its sidebar counts show **that location only**.
+- **Tokens are numbered per location**: each clinic starts at E-001, W-001 and so on.
+
+On **Today's patient flow**:
+- A location switcher opens on the working location.
+- **All locations** shows a comparison tile per clinic: in the building, over the limit, door-to-doctor, and a bar split by stage. The lanes then tag each patient with their location, and clicking a tile opens that clinic.
+
+**Data rules:**
+- Each registration stores `location`. Records created before locations existed fall back to their centre's first location.
+- Admission bed boards are per location. Only Greams Road starts with the ward fixture's in-patients.
+
 ### Roles
 
 | Person (demo) | Role | Screens |

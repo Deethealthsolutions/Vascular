@@ -8,6 +8,8 @@
 import Link from "next/link";
 import { useState, type CSSProperties } from "react";
 import { Guard, Top, useMe } from "@/components/cx/Shell";
+import { LocBadge } from "@/components/cx/LocBadge";
+import { currentLocation, locById, locOf, myLocations } from "@/lib/cx/locations";
 import { useStore, type Registration } from "@/lib/cx/store";
 
 const minsSince = (at?: string) => (at ? Math.max(0, Math.round((Date.now() - Date.parse(at)) / 60000)) : 0);
@@ -33,6 +35,7 @@ const OUTCOMES: { status: Registration["status"]; label: string; color: string }
   { status: "left without being seen", label: "Left", color: "var(--ink4)" },
 ];
 const DONE = OUTCOMES.map((o) => o.status);
+const STAGE_COLOR = ["#d6dde6", "#bccad9", "#a0b5cb", "#839fbb", "#6889a9", "#4f7396", "#3a5d80", "#284867"];
 const CAT_COLOR: Record<string, string> = { Emergency: "var(--red)", Urgent: "var(--orange)", Standard: "var(--amber)", Routine: "var(--green)" };
 
 /** When the patient entered the current stage: the last history event, or arrival. */
@@ -43,8 +46,8 @@ const toneOf = (m: number, s: Stage): Tone => (m > s.bad ? "bad" : m > s.warn ? 
 export function Flow() {
   return (
     <Guard screen="flow">
-      <Top title="Today's patient flow" sub="Where every patient is, and who has waited too long" />
-      <Body />
+      <Top title="Today's patient flow" sub="Where every patient is, and who has waited too long · choose a location or compare all" />
+      <div className="wrap"><Body /></div>
     </Guard>
   );
 }
@@ -53,7 +56,23 @@ function Body() {
   const me = useMe();
   const st = useStore();
   const [focus, setFocus] = useState<string | null>(null);
-  const regs = st.registrations.filter((r) => me.centres.includes(r.centre as never));
+  const [view, setView] = useState(""); // "" follows the location the staff member is working at
+  const mine = myLocations(me);
+  const here = currentLocation(st, me);
+  const sel = view || here.id;
+  const allRegs = st.registrations.filter((r) => mine.some((l) => l.id === locOf(r)));
+  const regs = sel === "all" ? allRegs : allRegs.filter((r) => locOf(r) === sel);
+  const perLoc = mine.map((l) => {
+    const rs = allRegs.filter((r) => locOf(r) === l.id);
+    const act = rs.filter((r) => !DONE.includes(r.status));
+    const tone = (r: Registration) => { const s = STAGES.find((x) => x.statuses.includes(r.status)); return s ? toneOf(minsSince(stageSince(r)), s) : "ok"; };
+    return {
+      l, act: act.length, done: rs.length - act.length, over: act.filter((r) => tone(r) === "bad").length, near: act.filter((r) => tone(r) === "warn").length,
+      d2d: median(rs.map((r) => minsBetween(r.at, r.seenAt)).filter((x): x is number => x != null)),
+      byStage: STAGES.map((s) => act.filter((r) => s.statuses.includes(r.status)).length),
+    };
+  });
+  const showLoc = sel === "all";
   const active = regs.filter((r) => !DONE.includes(r.status));
   const done = regs.filter((r) => DONE.includes(r.status));
 
@@ -79,6 +98,40 @@ function Body() {
 
   return (
     <>
+      {/* location switcher */}
+      <div className="fl-locs mb14" role="tablist" aria-label="Location">
+        {mine.length > 1 && (
+          <button role="tab" aria-selected={sel === "all"} className={sel === "all" ? "on" : ""} onClick={() => setView("all")}>
+            <span className="loc-stack" aria-hidden>{mine.map((l) => <i key={l.id} style={{ background: l.color }} />)}</span>
+            <span className="nm">All locations<small>{mine.length} clinics</small></span><span className="ct">{perLoc.reduce((a, p) => a + p.act, 0)}</span>
+          </button>
+        )}
+        {perLoc.map((p) => (
+          <button key={p.l.id} role="tab" aria-selected={sel === p.l.id} className={sel === p.l.id ? "on" : ""} onClick={() => setView(p.l.id)}>
+            <LocBadge id={p.l.id} dot={p.over ? "bad" : p.near ? "warn" : p.act ? "ok" : "empty"} title={`${p.l.name}: ${p.over ? `${p.over} over the limit` : p.near ? `${p.near} getting long` : "no long waits"}`} />
+            <span className="nm">{p.l.name}<small>{p.l.city}{p.l.id === here.id ? " · you are here" : ""}</small></span><span className="ct">{p.act}</span>
+          </button>
+        ))}
+      </div>
+
+      {showLoc && (
+        <div className="fl-cmp mb14">
+          {perLoc.map((p) => (
+            <button key={p.l.id} className="fl-cmp-t" style={{ "--lc": p.l.color } as CSSProperties} onClick={() => setView(p.l.id)} aria-label={`Open ${p.l.name}`}>
+              <div className="h"><LocBadge id={p.l.id} size="lg" /><div><b>{p.l.name}</b><span>{p.l.city}</span></div></div>
+              <div className="row">
+                <div><div className="v">{p.act}</div><div className="k">in the building</div></div>
+                <div><div className={`v${p.over ? " bad" : ""}`}>{p.over}</div><div className="k">over the limit</div></div>
+                <div><div className="v">{p.d2d != null ? `${p.d2d}′` : "—"}</div><div className="k">door → doctor</div></div>
+              </div>
+              <div className="fl-mini" aria-hidden>{p.act === 0 ? <i style={{ flex: 1, background: "var(--line)" }} /> : p.byStage.map((n, i) => (n ? <i key={i} style={{ flex: n, background: STAGE_COLOR[i] }} /> : null))}</div>
+              <div className="f">{p.near ? <span className="nr">{p.near} getting long</span> : <span className="mut">no waits building up</span>}<span className="mut">{p.done} finished</span></div>
+            </button>
+          ))}
+          <div className="fl-cmp-l"><span className="mut">Journey bar, left to right:</span>{STAGES.map((s, i) => <span key={s.id}><i style={{ background: STAGE_COLOR[i] }} />{s.short}</span>)}</div>
+        </div>
+      )}
+
       {/* summary strip */}
       <div className="fl-sum mb14">
         <Stat label="In the building" value={active.length} note={`${regs.length} registered today`} />
@@ -105,6 +158,7 @@ function Body() {
         <div className="fl-legend">
           <span><i className="lg ok" /> within limit</span><span><i className="lg warn" /> getting long</span><span><i className="lg bad" /> over the limit</span>
           <span className="sp" />
+          {showLoc && <span className="fl-lockey">{mine.map((l) => <span key={l.id}><LocBadge id={l.id} size="xs" />{l.short}</span>)}</span>}
           <span><i className="lg edge" /> chip edge = triage category</span>
         </div>
       </div>
@@ -127,8 +181,8 @@ function Body() {
                   const cat = r.triage?.category;
                   return (
                     <Link key={r.id} href={s.href} className={`fl-chip ${tone}`} style={{ "--cat": cat ? CAT_COLOR[cat] : "var(--line2)" } as CSSProperties}
-                      title={`${r.token} ${r.name} · ${r.age}${r.sex[0]} · ${r.queueLabel}${cat ? ` · ${cat}` : ""}${r.room ?? r.bay ? ` · ${r.room ?? r.bay}` : ""} · ${m} min in this stage · ${minsSince(r.at)} min since arrival`}>
-                      <span className="tok">{r.token}</span>
+                      title={`${r.token} ${r.name} · ${locById(locOf(r)).name} · ${r.age}${r.sex[0]} · ${r.queueLabel}${cat ? ` · ${cat}` : ""}${r.room ?? r.bay ? ` · ${r.room ?? r.bay}` : ""} · ${m} min in this stage · ${minsSince(r.at)} min since arrival`}>
+                      <span className="tok">{showLoc && <LocBadge id={locOf(r)} size="xs" />}{r.token}</span>
                       <span className="nm">{first(r.name)}</span>
                       <span className="min">{m}′</span>
                       <span className="bar" aria-hidden><i style={{ width: `${Math.min(100, (m / s.bad) * 100)}%` }} /><b style={{ left: `${(s.warn / s.bad) * 100}%` }} /></span>
@@ -151,7 +205,7 @@ function Body() {
                 <>
                   {over.map(({ r, m, s }) => (
                     <Link key={r.id} href={s.href} className="fl-att">
-                      <span className="fl-who"><b className="num">{r.token}</b> {first(r.name)}</span>
+                      <span className="fl-who">{showLoc && <LocBadge id={locOf(r)} size="xs" />}<b className="num">{r.token}</b> {first(r.name)}</span>
                       <span className="fl-what">{s.label}</span>
                       <span className="fl-when">{m}′<small>+{m - s.bad}′ over</small></span>
                     </Link>
@@ -161,7 +215,7 @@ function Body() {
                       <div className="fl-near-h"><span className="lg warn" />Getting long · {near.length}</div>
                       <div className="fl-near">
                         {near.map(({ r, m, s }) => (
-                          <Link key={r.id} href={s.href} title={`${r.name} · ${s.label} · ${m} min (limit ${s.bad})`}><b className="num">{r.token}</b> {m}′</Link>
+                          <Link key={r.id} href={s.href} title={`${r.name} · ${locById(locOf(r)).name} · ${s.label} · ${m} min (limit ${s.bad})`}>{showLoc && <LocBadge id={locOf(r)} size="xs" />}<b className="num">{r.token}</b> {m}′</Link>
                         ))}
                       </div>
                     </>
@@ -186,7 +240,7 @@ function Body() {
                     <summary>Show patients</summary>
                     {done.map((r) => {
                       const o = OUTCOMES.find((x) => x.status === r.status)!;
-                      return <div key={r.id} className="fl-done"><i style={{ background: o.color }} /><b className="num">{r.token}</b> {r.name}<span className="mut">{minsBetween(r.at, stageSince(r)) ?? "—"}′</span></div>;
+                      return <div key={r.id} className="fl-done"><i style={{ background: o.color }} />{showLoc && <LocBadge id={locOf(r)} size="xs" />}<b className="num">{r.token}</b> {r.name}<span className="mut">{minsBetween(r.at, stageSince(r)) ?? "—"}′</span></div>;
                     })}
                   </details>
                 </>

@@ -5,6 +5,7 @@ Public-facing platform for a wound care, vascular intervention, limb salvage, di
 
 - **[docs/SPEC.md](docs/SPEC.md)**: MVP specification covering roles, features, data model, integrations, HIPAA and FDA considerations, and phasing.
 - **[docs/PATIENT_JOURNEY.md](docs/PATIENT_JOURNEY.md)**: step-by-step patient journey (registration, initial nursing assessment, doctor consultation, checkout, tests & procedures, admission), rules, statuses and data handed between steps.
+- **[docs/RESEARCH_DOCUMENTS.md](docs/RESEARCH_DOCUMENTS.md)**: research documents register — Supabase setup, register numbers, upload and text scanning, workflow.
 - **[docs/GAP_ANALYSIS.md](docs/GAP_ANALYSIS.md)**: requirements vs the HTML mockup vs this build, with a demo script.
 - **[web/](web/)**: Next.js 16 + TypeScript + Tailwind 4 app. Currently a clickable prototype running on mock data.
 

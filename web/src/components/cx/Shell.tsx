@@ -6,6 +6,8 @@ import { useEffect, useRef, type ReactNode } from "react";
 import { CLIN, NET, PROF, RES, GRAPH, RULES } from "@/lib/cx/data";
 import { audit, openPending, resetStore, setState, useStore } from "@/lib/cx/store";
 import { canSee, LANDING, STAFF, staffById, type Screen } from "@/lib/cx/users";
+import { currentLocation, hereRegs, myLocations } from "@/lib/cx/locations";
+import { LocBadge } from "./LocBadge";
 import { Denied, Toaster } from "./ui";
 
 export function useMe() {
@@ -38,6 +40,7 @@ const NAV: { g: string; items: { s: Screen; href: string; ic: string; label: str
   { g: "Wound care", items: [{ s: "wound", href: "/clinical/wound", ic: "◎", label: "Wound & HBOT", cnt: () => 3 }] },
   { g: "Research", items: [
     { s: "research", href: "/clinical/research", ic: "⚗", label: "Research workspace", cnt: () => RES.studies.length },
+    { s: "rdocs", href: "/clinical/research-docs", ic: "▤", label: "Research documents" },
     { s: "graph", href: "/clinical/graph", ic: "◈", label: "Knowledge graph", cnt: () => GRAPH.totals.nodes },
   ] },
   { g: "System", items: [
@@ -58,6 +61,9 @@ export function Shell({ children }: { children: ReactNode }) {
   const path = usePathname();
   const router = useRouter();
   const cur = screenOf(path);
+  const here = currentLocation(st, me);
+  // Journey counts in the nav are for the location the staff member is working at.
+  const stHere = { ...st, registrations: hereRegs(st, me) };
 
   function switchUser(id: string) {
     const u = staffById(id);
@@ -81,6 +87,14 @@ export function Shell({ children }: { children: ReactNode }) {
             </select>
           </div>
         </div>
+        <div className="role" style={{ paddingTop: 10 }}>
+          <div className="role-l" style={{ display: "flex", alignItems: "center", gap: 6 }}>Working at <LocBadge id={here.id} size="xs" /></div>
+          <div className="role-b">
+            <select aria-label="Working at location" value={here.id} onChange={(e) => { setState(() => ({ location: e.target.value })); audit(me.name, "read", "session", `Working at ${myLocations(me).find((l) => l.id === e.target.value)?.name}`); }}>
+              {myLocations(me).map((l) => <option key={l.id} value={l.id}>{l.name} · {l.city}</option>)}
+            </select>
+          </div>
+        </div>
         <div className="who" style={{ paddingTop: 10 }}>
           <b>{me.role}</b><br />
           {me.centres.length === 3 ? "All centres" : me.centres.join(", ")} · {me.cls}
@@ -91,7 +105,7 @@ export function Shell({ children }: { children: ReactNode }) {
               <div className="nav-g">{g.g}</div>
               {g.items.map((it) => {
                 const allowed = canSee(me, it.s);
-                const n = st.hydrated && it.cnt ? it.cnt(st) : it.cnt && !it.hot ? it.cnt(st) : null;
+                const n = st.hydrated && it.cnt ? it.cnt(stHere) : it.cnt && !it.hot ? it.cnt(stHere) : null;
                 return (
                   <Link key={it.s} href={it.href} className={`${cur === it.s ? "on" : ""}${allowed ? "" : " dis"}`}
                     aria-disabled={!allowed} title={allowed ? undefined : "Not available to your role"}>

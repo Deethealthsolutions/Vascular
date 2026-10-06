@@ -12,6 +12,7 @@ import { Guard, Top, useMe } from "@/components/cx/Shell";
 import { Card, Kpis, Modal, NewsBadge, Pill, Prog, toast } from "@/components/cx/ui";
 import { SIGN, newsBand, news2 } from "@/lib/cx/data";
 import { downscale } from "@/components/cx/photo";
+import { currentLocation, hereRegs, placeAt } from "@/lib/cx/locations";
 import { audit, contentHash, storageOk, setState, uid, updateReg, useStore, type Limb, type Registration, type TriageRecord, type WoundPhoto } from "@/lib/cx/store";
 
 const BAYS = ["Assessment bay 1", "Assessment bay 2", "Assessment bay 3", "Dressing room"];
@@ -65,7 +66,8 @@ function Body() {
   const [panel, setPanel] = useState<string | null>(null);
   const [record, setRecord] = useState<string | null>(null);
 
-  const regs = st.registrations.filter((r) => me.centres.includes(r.centre as never));
+  const here = currentLocation(st, me);
+  const regs = hereRegs(st, me);
   const anchor = (r: Registration) => r.requeuedAt ?? r.at;
   const waiting = regs.filter((r) => r.status === "waiting for assessment")
     .sort((a, b) => rank[a.priority] - rank[b.priority] || anchor(a).localeCompare(anchor(b)));
@@ -104,7 +106,7 @@ function Body() {
   }
 
   function seedDemo() {
-    setState((s) => ({ registrations: [...demoArrivals(me.centres[0], "Kavya R."), ...s.registrations] }));
+    setState((s) => ({ registrations: [...placeAt(demoArrivals(here.centre, "Kavya R."), here.id), ...s.registrations] }));
     toast("Four demo arrivals added to the queue.");
   }
 

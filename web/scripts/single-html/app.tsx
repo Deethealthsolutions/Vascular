@@ -17,6 +17,8 @@ import { demoAtTests, demoForProcedure } from "@/app/clinical/services/Services"
 import Link from "next/link";
 import { NotFoundError } from "./shims/next-navigation";
 import { match, navigate, useLoc } from "./router";
+import { placeAt } from "@/lib/cx/locations";
+import type { Registration } from "@/lib/cx/store";
 
 import * as Home from "@/app/(public)/page";
 import * as Book from "@/app/(public)/book/page";
@@ -54,6 +56,7 @@ import * as Audit from "@/app/clinical/audit/page";
 import * as Auto from "@/app/clinical/auto/page";
 import * as Arch from "@/app/clinical/arch/page";
 import * as Requirements from "@/app/clinical/requirements/page";
+import * as ResearchDocsNote from "./ResearchDocsNote";
 
 type Area = "public" | "staff" | "clinical";
 type Mod = { default: ComponentType<never>; metadata?: { title?: unknown }; generateMetadata?: (p: never) => Promise<{ title?: unknown }> };
@@ -68,7 +71,7 @@ const ROUTES: [string, Mod, Area][] = [
   ["/clinical/visit", Visit, "clinical"], ["/clinical/nurse", Nurse, "clinical"], ["/clinical/profile", Profile, "clinical"],
   ["/clinical/signoff", Signoff, "clinical"], ["/clinical/wound", Wound, "clinical"], ["/clinical/research", Research, "clinical"],
   ["/clinical/graph", Graph, "clinical"], ["/clinical/audit", Audit, "clinical"], ["/clinical/auto", Auto, "clinical"],
-  ["/clinical/arch", Arch, "clinical"], ["/clinical/requirements", Requirements, "clinical"],
+  ["/clinical/arch", Arch, "clinical"], ["/clinical/research-docs", ResearchDocsNote, "clinical"], ["/clinical/requirements", Requirements, "clinical"],
 ];
 const TEMPLATE: Record<Area, [string, string]> = {
   public: [site.name, `%s | ${site.name}`],
@@ -84,7 +87,17 @@ function seed() {
     if (localStorage.getItem(CLINICAL_KEY)) return;
     const names = ["Gopal Krishnan", "Lakshmi Narayanan", "Imran Sheikh"];
     const ready = demoAssessed("CHN").map((r, i) => ({ ...r, name: names[i] }));
-    localStorage.setItem(CLINICAL_KEY, JSON.stringify({ user: "mk", registrations: [...demoArrivals("CHN", "Kavya R."), ...ready, ...demoConsulted("CHN"), ...demoForAdmission("CHN"), ...demoAtTests("CHN"), ...demoForProcedure("CHN")] }));
+    // Greams Road (Chennai) gets the full day; the Karnataka clinics get a smaller, local day.
+    const local = (regs: Registration[], loc: string, ns: string[], minsBack: number) =>
+      placeAt(regs, loc).map((r, i) => ({ ...r, name: ns[i % ns.length], language: "Kannada", city: loc === "MYS-1" ? "Mysuru" : "Bengaluru", state: "Karnataka",
+        at: new Date(Date.parse(r.at) - minsBack * 60000).toISOString() }));
+    const karnataka = [
+      ...local([...demoArrivals("BLR", "Front desk"), ...demoAssessed("BLR")], "BLR-HSR", ["Ramesh Gowda", "Shilpa Rao", "Naveen Kumar", "Kavitha Shetty", "Suresh Hegde", "Anitha Prakash", "Mohan Das"], 25),
+      ...local([...demoAssessed("BLR"), ...demoConsulted("BLR"), ...demoAtTests("BLR")], "BLR-RJN", ["Manjunath H.", "Lakshmamma", "Prakash Hegde", "Sowmya N.", "Raghavendra", "Pushpa K.", "Venkatesh Murthy", "Geetha S."], 10),
+      ...local([...demoArrivals("BLR", "Front desk").slice(0, 2), ...demoForProcedure("BLR")], "MYS-1", ["Basavaraj", "Girija Devi", "Mahadev Prasad", "Roopa K."], 0),
+    ];
+    const chennai = placeAt([...demoArrivals("CHN", "Kavya R."), ...ready, ...demoConsulted("CHN"), ...demoForAdmission("CHN"), ...demoAtTests("CHN"), ...demoForProcedure("CHN")], "CHN-GR");
+    localStorage.setItem(CLINICAL_KEY, JSON.stringify({ user: "mk", location: "CHN-GR", registrations: [...chennai, ...karnataka] }));
   } catch {
     // storage blocked: screens start empty and offer their own "Load demo" buttons
   }
