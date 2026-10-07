@@ -1,6 +1,6 @@
 // Entry point for the single-file HTML export (npm run build:html).
 // Mounts every route of the Next.js app (public site, staff walk-in flow, clinical
-// workspace) behind a hash router, and seeds demo patients on first open.
+// workspace) behind a hash router; the store seeds the demo day on first open.
 
 import { Component, Suspense, use, useEffect, useMemo, type ComponentType, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
@@ -9,16 +9,9 @@ import { Footer } from "@/components/Footer";
 import { Shell } from "@/components/cx/Shell";
 import { StaffTopBar } from "@/components/staff/StaffTopBar";
 import { site } from "@/lib/site";
-import { demoArrivals } from "@/app/clinical/triage/Triage";
-import { demoAssessed } from "@/app/clinical/consult/Consult";
-import { demoConsulted } from "@/app/clinical/checkout/Checkout";
-import { demoForAdmission } from "@/app/clinical/admit/Admit";
-import { demoAtTests, demoForProcedure } from "@/app/clinical/services/Services";
 import Link from "next/link";
 import { NotFoundError } from "./shims/next-navigation";
 import { match, navigate, useLoc } from "./router";
-import { placeAt } from "@/lib/cx/locations";
-import type { Registration } from "@/lib/cx/store";
 
 import * as Home from "@/app/(public)/page";
 import * as Book from "@/app/(public)/book/page";
@@ -79,29 +72,8 @@ const TEMPLATE: Record<Area, [string, string]> = {
   clinical: ["Clinical workspace", "%s | Clinical workspace"],
 };
 
-// ------------------------------------------------------------------ demo data on first open
-
-const CLINICAL_KEY = "prototype.clinical.v1";
-function seed() {
-  try {
-    if (localStorage.getItem(CLINICAL_KEY)) return;
-    const names = ["Gopal Krishnan", "Lakshmi Narayanan", "Imran Sheikh"];
-    const ready = demoAssessed("CHN").map((r, i) => ({ ...r, name: names[i] }));
-    // Greams Road (Chennai) gets the full day; the Karnataka clinics get a smaller, local day.
-    const local = (regs: Registration[], loc: string, ns: string[], minsBack: number) =>
-      placeAt(regs, loc).map((r, i) => ({ ...r, name: ns[i % ns.length], language: "Kannada", city: loc === "MYS-1" ? "Mysuru" : "Bengaluru", state: "Karnataka",
-        at: new Date(Date.parse(r.at) - minsBack * 60000).toISOString() }));
-    const karnataka = [
-      ...local([...demoArrivals("BLR", "Front desk"), ...demoAssessed("BLR")], "BLR-HSR", ["Ramesh Gowda", "Shilpa Rao", "Naveen Kumar", "Kavitha Shetty", "Suresh Hegde", "Anitha Prakash", "Mohan Das"], 25),
-      ...local([...demoAssessed("BLR"), ...demoConsulted("BLR"), ...demoAtTests("BLR")], "BLR-RJN", ["Manjunath H.", "Lakshmamma", "Prakash Hegde", "Sowmya N.", "Raghavendra", "Pushpa K.", "Venkatesh Murthy", "Geetha S."], 10),
-      ...local([...demoArrivals("BLR", "Front desk").slice(0, 2), ...demoForProcedure("BLR")], "MYS-1", ["Basavaraj", "Girija Devi", "Mahadev Prasad", "Roopa K."], 0),
-    ];
-    const chennai = placeAt([...demoArrivals("CHN", "Kavya R."), ...ready, ...demoConsulted("CHN"), ...demoForAdmission("CHN"), ...demoAtTests("CHN"), ...demoForProcedure("CHN")], "CHN-GR");
-    localStorage.setItem(CLINICAL_KEY, JSON.stringify({ user: "mk", location: "CHN-GR", registrations: [...chennai, ...karnataka] }));
-  } catch {
-    // storage blocked: screens start empty and offer their own "Load demo" buttons
-  }
-}
+// Demo patients: the store builds the same "demo day" as the website on first open
+// (app/clinical/demoDay.ts, registered by the clinical Shell).
 
 // ------------------------------------------------------------------ page rendering
 
@@ -202,7 +174,6 @@ document.addEventListener("click", (e) => {
   else if (href.startsWith("#") && !href.startsWith("#/") && href.length > 1) { e.preventDefault(); document.getElementById(href.slice(1))?.scrollIntoView({ behavior: "smooth" }); }
 });
 
-seed();
 createRoot(document.getElementById("root")!, {
   onCaughtError: (err) => { if (!(err instanceof NotFoundError)) console.error(err); },
 }).render(<App />);

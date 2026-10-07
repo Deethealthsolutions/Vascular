@@ -202,6 +202,8 @@ export type State = {
   appointments: Appointment[];
   /** Clinic location the signed-in staff member is working at (sidebar "Working at"). */
   location: string;
+  /** Day the demo patients were generated for (YYYY-MM-DD), or "off" after "Clear all data". */
+  demoDay?: string;
   hydrated: boolean;
 };
 
@@ -222,6 +224,12 @@ function migrate(s: State): State {
   return { ...s, registrations: s.registrations.map((r) => ({ ...r, status: st[r.status] ?? r.status, bay: r.bay?.replace("Triage bay", "Assessment bay") })) };
 }
 
+// Demo day (app/clinical/demoDay.ts registers it): fills every journey screen with patients.
+type Seeder = (s: State) => Pick<State, "registrations" | "appointments" | "audit">;
+let seeder: Seeder | null = null;
+export function setDemoSeeder(f: Seeder) { seeder = f; }
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+
 function load() {
   if (loaded || typeof window === "undefined") return;
   loaded = true;
@@ -230,6 +238,11 @@ function load() {
     state = migrate({ ...initial, ...(raw ? (JSON.parse(raw) as Partial<State>) : {}), hydrated: true });
   } catch {
     state = { ...initial, hydrated: true };
+  }
+  // First visit, or a new day: (re)build the demo patients. Records staff entered are kept.
+  if (seeder && state.demoDay !== "off" && state.demoDay !== today()) {
+    state = { ...state, ...seeder(state), demoDay: today() };
+    persist();
   }
 }
 
@@ -282,8 +295,17 @@ export function useStore(): State {
   return useSyncExternalStore(subscribe, getState, () => initial);
 }
 
+/** Back to a fresh demo day (everything entered in this browser is cleared). */
 export function resetStore() {
   state = { ...initial, hydrated: true };
+  if (seeder) state = { ...state, ...seeder(state), demoDay: today() };
+  persist();
+  listeners.forEach((l) => l());
+}
+
+/** Empty workspace with no demo patients (stays empty until "Reset to demo day"). */
+export function clearStore() {
+  state = { ...initial, hydrated: true, demoDay: "off" };
   persist();
   listeners.forEach((l) => l());
 }

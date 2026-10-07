@@ -629,6 +629,23 @@ State.appointments[] { id, regId, name, mrn, date, time, clinic, doctor, at, by 
 
 ## 7. Demo script
 
+**Demo day.** The first time a browser opens the workspace, it is filled with a ready-made clinic day at all four locations (`web/src/app/clinical/demoDay.ts`):
+
+| Location | Patients |
+|---|---|
+| Greams Road | 24 |
+| HSR Layout | 15 |
+| Rajajinagar | 11 |
+| Mysuru | 8 |
+
+- **Every stage is covered:** waiting, with the nurse, ready for the doctor, with the doctor, at tests, dressing room, checkout, waiting for a bed, admitted, checked out and left without being seen.
+- **Also included:** follow-up appointments and an access-audit trail.
+- **Deliberately late:** one patient at Greams Road is over the doctor-wait limit and one is long at tests, so *Needs attention* has something to show.
+- **Freshness:** times are relative to now, and the demo patients are rebuilt each new day. Patients entered by hand are kept.
+- **Sidebar footer:** **Reset to demo day** starts again. **Clear all** empties the clinic.
+
+The steps below use the patients from each screen's **Load demo …** button, which appears only when that screen's list is empty. To follow them exactly, press **Clear all** first.
+
 1. Sidebar → **Signed in as: Kavya R.** → *1 · Registration*.
 2. Search `Fatima` → *This is the patient* (returning). Or register a new patient; OTP is **4829**; draw a signature.
 3. Try a red flag (e.g. *leg suddenly cold*) → emergency mode → **Register & send to Emergency**.
@@ -670,7 +687,7 @@ State.appointments[] { id, regId, name, mrn, date, time, clinic, doctor, at, by 
     4. Each needs the consent signature, the wristband and a check of the SBAR. Then open *Ward round* to see the three new in-patients.
 16. *Today's patient flow* shows where everyone is and how long they have waited.
 
-*Reset prototype data* (sidebar footer) clears everything.
+*Reset to demo day* (sidebar footer) goes back to the ready-made demo day; *Clear all* empties everything.
 
 Automated browser walk-throughs used during development are in the session scratchpad (`reg.mjs`, `tri.mjs`, `bay.mjs`, `wnd.mjs`, `con.mjs`, `chk.mjs`, `adm.mjs`, `svc.mjs`); they are not yet part of the repo.
 

@@ -4,7 +4,9 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, type ReactNode } from "react";
 import { CLIN, NET, PROF, RES, GRAPH, RULES } from "@/lib/cx/data";
-import { audit, openPending, resetStore, setState, useStore } from "@/lib/cx/store";
+import { audit, clearStore, openPending, resetStore, setState, useStore } from "@/lib/cx/store";
+// Registers the demo-day generator with the store (side-effect import).
+import "@/app/clinical/demoDay";
 import { canSee, LANDING, STAFF, staffById, type Screen } from "@/lib/cx/users";
 import { currentLocation, hereRegs, myLocations } from "@/lib/cx/locations";
 import { LogoutButton } from "@/components/auth/LogoutButton";
@@ -132,9 +134,14 @@ export function Shell({ children, account }: { children: ReactNode; account?: Ac
         </nav>
         <div className="side-f">
           Prototype · synthetic data · not a medical device<br />
-          <button onClick={() => confirm("Clear everything saved in this browser (observations, signatures, audit)?") && resetStore()}
+          <button onClick={() => confirm("Start a fresh demo day? Everything entered in this browser (patients, observations, signatures, audit) is replaced by the demo patients.") && resetStore()}
             style={{ background: "none", border: 0, color: "#8895a4", padding: 0, marginTop: 6, textDecoration: "underline" }}>
-            Reset prototype data
+            Reset to demo day
+          </button>
+          {" · "}
+          <button onClick={() => confirm("Clear all data in this browser and start with an empty clinic (no demo patients)?") && clearStore()}
+            style={{ background: "none", border: 0, color: "#8895a4", padding: 0, textDecoration: "underline" }}>
+            Clear all
           </button>
           {" · "}<Link href="/" style={{ color: "#8895a4" }}>Public site</Link>
         </div>
