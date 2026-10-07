@@ -11,6 +11,7 @@ import { canSee, LANDING, STAFF, staffById, type Screen } from "@/lib/cx/users";
 import { currentLocation, hereRegs, myLocations } from "@/lib/cx/locations";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import type { Account } from "@/lib/auth/session";
+import type { LoginStats } from "@/lib/auth/stats";
 import { LocBadge } from "./LocBadge";
 import { Denied, Toaster } from "./ui";
 
@@ -60,7 +61,7 @@ function screenOf(path: string): Screen {
 }
 
 /** `account` is the logged-in user (absent in the single-file HTML export, which has no server). */
-export function Shell({ children, account }: { children: ReactNode; account?: Account | null }) {
+export function Shell({ children, account, loginStats }: { children: ReactNode; account?: Account | null; loginStats?: LoginStats | null }) {
   const st = useStore();
   const me = staffById(st.user);
   const path = usePathname();
@@ -92,6 +93,12 @@ export function Shell({ children, account }: { children: ReactNode; account?: Ac
               <span className="acct-n"><b>{account.display_name}</b><br />{account.username} · {account.role}</span>
               <LogoutButton className="acct-out" />
             </div>
+            {loginStats && (
+              <div className="acct-stats" title={`${loginStats.users_logged_in} of ${loginStats.total_users} active users have logged in at least once · ${loginStats.logins_total} log-ins in total · ${loginStats.logins_today} today (India time)`}>
+                <span><b>{loginStats.users_logged_in}</b>/{loginStats.total_users} users logged in</span>
+                <span><b>{loginStats.logins_total}</b> log-ins · <b>{loginStats.logins_today}</b> today</span>
+              </div>
+            )}
           </div>
         )}
         <div className="role">

@@ -28,6 +28,28 @@
 
 **Demo role picker:** the sidebar's **Acting as (demo role)** selector is separate from the log-in. It lets one logged-in person view the screens as any staff role. Linking each account to its own role is the next step.
 
+## Log-in counts
+
+**Where:** the sidebar shows a label under the logged-in user, for example **3/5 users logged in · 42 log-ins · 6 today**.
+
+**What counts:**
+- **Users logged in:** active users who have logged in at least once, out of all active users.
+- **Log-ins:** every successful log-in. Wrong passwords and locked accounts don't count.
+- **Today:** India time.
+
+**How it works:**
+- Each successful log-in adds a row to `app_login_events` (migration `20261008000000_app_login_stats.sql`).
+- `app_login_stats()` returns the counts only, with no names, so it is safe to call with the public key. The events table itself can't be read with that key.
+- Users who logged in before the migration count once, at their last log-in.
+- If the migration hasn't been run, the label is simply hidden.
+
+**Who logged in, and when** (SQL editor):
+```sql
+select u.username, u.display_name, count(*) as logins, max(e.at) as last_login
+from public.app_login_events e join public.app_users u on u.id = e.user_id
+group by u.username, u.display_name order by last_login desc;
+```
+
 ## Setup
 
 1. **Supabase → SQL editor:** run `supabase/migrations/20261007000000_app_users.sql`.
