@@ -7,6 +7,8 @@ import { CLIN, NET, PROF, RES, GRAPH, RULES } from "@/lib/cx/data";
 import { audit, openPending, resetStore, setState, useStore } from "@/lib/cx/store";
 import { canSee, LANDING, STAFF, staffById, type Screen } from "@/lib/cx/users";
 import { currentLocation, hereRegs, myLocations } from "@/lib/cx/locations";
+import { LogoutButton } from "@/components/auth/LogoutButton";
+import type { Account } from "@/lib/auth/session";
 import { LocBadge } from "./LocBadge";
 import { Denied, Toaster } from "./ui";
 
@@ -55,7 +57,8 @@ function screenOf(path: string): Screen {
   return (seg === "" ? "overview" : seg) as Screen;
 }
 
-export function Shell({ children }: { children: ReactNode }) {
+/** `account` is the logged-in user (absent in the single-file HTML export, which has no server). */
+export function Shell({ children, account }: { children: ReactNode; account?: Account | null }) {
   const st = useStore();
   const me = staffById(st.user);
   const path = usePathname();
@@ -79,8 +82,18 @@ export function Shell({ children }: { children: ReactNode }) {
           <div className="h"><span className="logo">V</span><span>Vascular &amp; Diabetic Foot</span></div>
           <div className="s">{NET.org}</div>
         </div>
+        {account && (
+          <div className="role acct">
+            <div className="role-l">Logged in</div>
+            <div className="acct-b">
+              <span className="acct-av" aria-hidden>{account.display_name.slice(0, 1).toUpperCase()}</span>
+              <span className="acct-n"><b>{account.display_name}</b><br />{account.username} · {account.role}</span>
+              <LogoutButton className="acct-out" />
+            </div>
+          </div>
+        )}
         <div className="role">
-          <div className="role-l">Signed in as</div>
+          <div className="role-l" title="Prototype: pick a staff member to see the screens as their role">Acting as (demo role)</div>
           <div className="role-b">
             <select aria-label="Signed-in staff member" value={st.user} onChange={(e) => switchUser(e.target.value)}>
               {STAFF.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}

@@ -435,6 +435,12 @@
 .cx .tabs button{background:none;border:0;border-bottom:2px solid transparent;padding:8px 13px;font:500 13px/1 var(--f);color:var(--ink2)}
 .cx .tabs button.on{border-color:var(--blue);color:var(--ink);font-weight:600}
 .cx .nav a.dis{opacity:.35;pointer-events:none}
+.cx .acct-b{display:flex;align-items:center;gap:8px}
+.cx .acct-av{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:var(--teal);color:#fff;font:700 12px/1 var(--f)}
+.cx .acct-n{flex:1;min-width:0;font:400 10.5px/1.35 var(--f);color:#8895a4;overflow:hidden;text-overflow:ellipsis}
+.cx .acct-n b{font-weight:600;font-size:12px;color:#e6ebf0}
+.cx .acct-out{flex:none;background:#182330;border:1px solid #2a3846;color:#c3ccd6;padding:5px 8px;border-radius:5px;font:500 10.5px/1 var(--f);cursor:pointer}
+.cx .acct-out:hover{background:#223142;color:#fff}
 .cx .role-b select{flex:1;background:#182330;color:#c3ccd6;border:0;padding:6px;border-radius:4px;font:500 11px/1 var(--f)}
 .cx .who{padding:0 14px 12px;font:400 11px/1.4 var(--f);color:#8895a4;border-bottom:1px solid #1e2935}
 .cx .who b{color:#fff;font-weight:600}

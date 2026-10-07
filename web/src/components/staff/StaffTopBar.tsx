@@ -4,13 +4,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { resetDemo, setStaff, staffUsers, useStaff } from "@/lib/clinic";
 import { site } from "@/lib/site";
+import { LogoutButton } from "@/components/auth/LogoutButton";
+import type { Account } from "@/lib/auth/session";
 
 const links = [
   { href: "/staff", label: "Clinic board" },
   { href: "/staff/check-in", label: "Check in patient" },
 ];
 
-export function StaffTopBar() {
+export function StaffTopBar({ account }: { account?: Account | null }) {
   const pathname = usePathname();
   const me = useStaff();
 
@@ -33,7 +35,7 @@ export function StaffTopBar() {
         </nav>
         <div className="ml-auto flex items-center gap-3 text-sm">
           <label className="flex items-center gap-2">
-            <span className="text-white/70">Signed in as</span>
+            <span className="text-white/70">Acting as</span>
             <select value={me.id} onChange={(e) => setStaff(e.target.value as typeof me.id)}
               className="rounded-md border border-white/30 bg-brand-dark px-2 py-1">
               {staffUsers.map((u) => <option key={u.id} value={u.id}>{u.name} ({u.role})</option>)}
@@ -44,6 +46,12 @@ export function StaffTopBar() {
             Reset demo
           </button>
           <Link href="/" className="text-white/70 hover:text-white">Public site ↗</Link>
+          {account && (
+            <span className="flex items-center gap-2 border-l border-white/20 pl-3">
+              <span className="text-white/70">{account.display_name}</span>
+              <LogoutButton className="rounded-md border border-white/30 px-2 py-1 hover:bg-white/10" />
+            </span>
+          )}
         </div>
       </div>
     </header>
