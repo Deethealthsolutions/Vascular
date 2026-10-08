@@ -24,9 +24,46 @@
 **Protections**
 - **Lock-out:** 5 wrong passwords in a row lock the account for 15 minutes.
 - **Same answer for every failure:** unknown usernames, wrong passwords and inactive accounts all get "Wrong username or password", and take the same time to answer.
-- **Hidden table:** the `app_users` table can't be read with the public key; it has row-level security and no grants. Accounts can only be created or reset from the Supabase SQL editor.
+- **Hidden table:** the `app_users` table can't be read with the public key; it has row-level security and no grants. Accounts are managed on the **Users** screen (admins only) or from the Supabase SQL editor.
+- **Database sessions:** each log-in also gets a random session token (only its SHA-256 is stored, in `app_sessions`). The workspace checks it on every full page load, so a session ended by an admin stops working straight away.
 
 **Demo role picker:** the sidebar's **Acting as (demo role)** selector is separate from the log-in. It lets one logged-in person view the screens as any staff role. Linking each account to its own role is the next step.
+
+## Users screen (Admin only)
+
+**Where:** sidebar → **Administration → Users** (`/clinical/users`). The link appears only for accounts with the **Admin** role. Anyone else who opens the address sees "access denied".
+
+**What an admin can do:**
+- **List everyone:** name, username, role, status (active / inactive / locked), last log-in and number of log-ins. Search by name, filter by role, hide inactive accounts.
+- **Add a user:** full name, username (lower case; letters, numbers, `.` `-` `_`), role, and a password of at least 8 characters. **Generate** makes a random 12-character password to hand over securely.
+- **Edit a user:** change the name, username or role, set a new password (leave blank to keep the current one), or mark them inactive.
+- **Unlock** an account locked after 5 wrong passwords.
+
+**Roles:**
+
+| Role | Stored as |
+|---|---|
+| Front office | `front_office` |
+| Nurse | `nurse` |
+| Doctor | `doctor` |
+| Research scientist | `research_scientist` |
+| Director | `director` |
+| Medical record executive | `medical_records` |
+| Admin | `admin` |
+
+**Safety rules (enforced by the database):**
+- **Admins only:** every list, save and unlock passes the caller's session token. The database checks it belongs to an **active Admin**, so the public key alone can't read or change accounts.
+- **No self-lockout:** an admin can't remove their own Admin role or deactivate themselves.
+- **No deletion:** accounts are never deleted, so the log-in history stays complete. Mark them inactive instead.
+- **Sessions end on change:** deactivating someone, resetting their password or changing their role ends their open sessions. Next time they load a page they go to the log-in screen with "Your session has ended".
+- **Change log:** every change is recorded in `app_user_changes` (who, which account, what changed), never the password.
+
+**What a role controls today:** the Users screen. The clinical screens still follow the **Acting as (demo role)** picker; linking each log-in role to the screens it may use is the next step.
+
+**Who changed what** (SQL editor):
+```sql
+select at, actor, username, action, detail from public.app_user_changes order by at desc;
+```
 
 ## Log-in counts
 
@@ -52,7 +89,7 @@ group by u.username, u.display_name order by last_login desc;
 
 ## Setup
 
-1. **Supabase → SQL editor:** run `supabase/migrations/20261007000000_app_users.sql`.
+1. **Supabase → SQL editor:** run, in order, `20261007000000_app_users.sql`, `20261008000000_app_login_stats.sql` and `20261009000000_app_user_admin.sql` from `supabase/migrations/`. After the last one, everyone logs in once more.
 2. **Create the first account.** Also in the SQL editor:
    ```sql
    select public.app_create_user('admin', 'Administrator', 'admin', '<password>');

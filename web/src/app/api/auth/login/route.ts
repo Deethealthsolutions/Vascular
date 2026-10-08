@@ -1,13 +1,13 @@
-import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
+import { authDb } from "@/lib/auth/db";
 import { authConfigured, SESSION_COOKIE, SESSION_HOURS, signSession, type Account } from "@/lib/auth/session";
 
 // Checks the username and password with the database's app_login() function
 // (supabase/migrations/*_app_users.sql) and, if they match, sets the signed session cookie.
 
 export async function POST(req: Request) {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL, anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !anon || !authConfigured()) {
+  const db = authDb();
+  if (!db || !authConfigured()) {
     return NextResponse.json({ error: "Log-in is not set up on this server (Supabase keys or AUTH_SECRET missing)." }, { status: 503 });
   }
 
@@ -19,14 +19,13 @@ export async function POST(req: Request) {
   } catch { /* fall through to the empty-field check */ }
   if (!username || !password) return NextResponse.json({ error: "Enter your username and password." }, { status: 400 });
 
-  const db = createClient(url, anon, { auth: { persistSession: false, autoRefreshToken: false } });
   const { data, error } = await db.rpc("app_login", { p_username: username, p_password: password });
   if (error) {
     console.error("app_login failed:", error.message);
     return NextResponse.json({ error: "Could not reach the user database. Try again in a moment." }, { status: 502 });
   }
 
-  const r = data as { ok: boolean; error?: string; locked_until?: string; user?: Account };
+  const r = data as { ok: boolean; error?: string; locked_until?: string; user?: Account; token?: string };
   if (!r?.ok || !r.user) {
     if (r?.error === "locked") {
       const until = r.locked_until ? new Date(r.locked_until).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Kolkata" }) : "later";
@@ -36,7 +35,7 @@ export async function POST(req: Request) {
   }
 
   const res = NextResponse.json({ ok: true, user: { username: r.user.username, display_name: r.user.display_name } });
-  res.cookies.set(SESSION_COOKIE, await signSession(r.user), {
+  res.cookies.set(SESSION_COOKIE, await signSession(r.user, r.token), {
     httpOnly: true, sameSite: "lax", path: "/", maxAge: SESSION_HOURS * 3600,
     secure: process.env.NODE_ENV === "production",
   });

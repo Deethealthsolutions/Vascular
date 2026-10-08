@@ -12,6 +12,7 @@ import { currentLocation, hereRegs, myLocations } from "@/lib/cx/locations";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import type { Account } from "@/lib/auth/session";
 import type { LoginStats } from "@/lib/auth/stats";
+import { isAdmin, roleLabel } from "@/lib/auth/roles";
 import { LocBadge } from "./LocBadge";
 import { Denied, Toaster } from "./ui";
 
@@ -90,7 +91,7 @@ export function Shell({ children, account, loginStats }: { children: ReactNode; 
             <div className="role-l">Logged in</div>
             <div className="acct-b">
               <span className="acct-av" aria-hidden>{account.display_name.slice(0, 1).toUpperCase()}</span>
-              <span className="acct-n"><b>{account.display_name}</b><br />{account.username} · {account.role}</span>
+              <span className="acct-n"><b>{account.display_name}</b><br />{account.username} · {roleLabel(account.role)}</span>
               <LogoutButton className="acct-out" />
             </div>
             {loginStats && (
@@ -138,6 +139,14 @@ export function Shell({ children, account, loginStats }: { children: ReactNode; 
               })}
             </div>
           ))}
+          {isAdmin(account) && (
+            <div>
+              <div className="nav-g">Administration</div>
+              <Link href="/clinical/users" className={path.startsWith("/clinical/users") ? "on" : ""}>
+                <span className="ic">⚿</span><span>Users</span>
+              </Link>
+            </div>
+          )}
         </nav>
         <div className="side-f">
           Prototype · synthetic data · not a medical device<br />

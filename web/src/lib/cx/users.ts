@@ -62,6 +62,8 @@ const ALLOW: Record<Screen, Cls[] | "all"> = {
 
 export function canSee(u: Staff, s: Screen) {
   const a = ALLOW[s];
+  // Screens outside the demo role table (e.g. Users, gated by the log-in role) are not limited here.
+  if (!a) return true;
   if (s === "overview" || s === "audit") return a === "all" || (a.includes(u.cls) && (u.head || u.cls === "custodian"));
   return a === "all" || a.includes(u.cls);
 }

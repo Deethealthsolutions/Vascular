@@ -27,6 +27,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         <div className="rounded-2xl bg-white p-7 shadow-2xl shadow-black/30">
           <h1 className="text-xl font-semibold text-ink">Log in</h1>
           <p className="mt-1 text-sm text-muted">Use the username and password the hospital gave you.</p>
+          {sp.ended && <p className="mt-3 rounded-lg bg-warn-soft px-3 py-2 text-sm text-warn">Your session has ended — your account was changed by an administrator. Please log in again.</p>}
           <LoginForm next={next} />
         </div>
 
