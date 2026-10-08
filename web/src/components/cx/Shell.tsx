@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, type ReactNode } from "react";
 import { CLIN, NET, PROF, RES, GRAPH, RULES } from "@/lib/cx/data";
 import { audit, clearStore, openPending, resetStore, setState, useStore } from "@/lib/cx/store";
 // Registers the demo-day generator with the store (side-effect import).
@@ -31,6 +31,11 @@ const NAV: { g: string; items: { s: Screen; href: string; ic: string; label: str
     { s: "services", href: "/clinical/services", ic: "⚗", label: "4B · Tests & procedures", cnt: (st) => st.registrations.filter((r) => r.status === "at tests" || r.status === "for procedure").length || null, hot: true },
     { s: "admit", href: "/clinical/admit", ic: "⌂", label: "4C · Admission", cnt: (st) => st.registrations.filter((r) => r.status === "awaiting admission").length || null, hot: true },
   ] },
+  { g: "Research", items: [
+    { s: "research", href: "/clinical/research", ic: "⚗", label: "Research workspace", cnt: () => RES.studies.length },
+    { s: "rdocs", href: "/clinical/research-docs", ic: "▤", label: "Research documents" },
+    { s: "graph", href: "/clinical/graph", ic: "◈", label: "Knowledge graph", cnt: () => GRAPH.totals.nodes },
+  ] },
   { g: "Leadership", items: [{ s: "overview", href: "/clinical", ic: "▦", label: "Network overview" }] },
   { g: "Bedside", items: [
     { s: "round", href: "/clinical/round", ic: "☰", label: "Ward round & clinics", cnt: () => NET.roster.length },
@@ -44,11 +49,6 @@ const NAV: { g: string; items: { s: Screen; href: string; ic: string; label: str
     { s: "audit", href: "/clinical/audit", ic: "⦿", label: "Access audit", cnt: (st) => st.audit.length || null },
   ] },
   { g: "Wound care", items: [{ s: "wound", href: "/clinical/wound", ic: "◎", label: "Wound & HBOT", cnt: () => 3 }] },
-  { g: "Research", items: [
-    { s: "research", href: "/clinical/research", ic: "⚗", label: "Research workspace", cnt: () => RES.studies.length },
-    { s: "rdocs", href: "/clinical/research-docs", ic: "▤", label: "Research documents" },
-    { s: "graph", href: "/clinical/graph", ic: "◈", label: "Knowledge graph", cnt: () => GRAPH.totals.nodes },
-  ] },
   { g: "System", items: [
     { s: "arch", href: "/clinical/arch", ic: "⊞", label: "Architecture" },
     { s: "auto", href: "/clinical/auto", ic: "⚙", label: "Automations", cnt: () => RULES.length },
@@ -123,8 +123,10 @@ export function Shell({ children, account, loginStats }: { children: ReactNode; 
           {me.centres.length === 3 ? "All centres" : me.centres.join(", ")} · {me.cls}
         </div>
         <nav className="nav">
+          {/* Order: Patient journey, Research, Administration (admins only), then the rest. */}
           {NAV.map((g) => (
-            <div key={g.g}>
+            <Fragment key={g.g}>
+            <div>
               <div className="nav-g">{g.g}</div>
               {g.items.map((it) => {
                 const allowed = canSee(me, it.s);
@@ -138,15 +140,16 @@ export function Shell({ children, account, loginStats }: { children: ReactNode; 
                 );
               })}
             </div>
+            {g.g === "Research" && isAdmin(account) && (
+              <div>
+                <div className="nav-g">Administration</div>
+                <Link href="/clinical/users" className={path.startsWith("/clinical/users") ? "on" : ""}>
+                  <span className="ic">⚿</span><span>Users</span>
+                </Link>
+              </div>
+            )}
+            </Fragment>
           ))}
-          {isAdmin(account) && (
-            <div>
-              <div className="nav-g">Administration</div>
-              <Link href="/clinical/users" className={path.startsWith("/clinical/users") ? "on" : ""}>
-                <span className="ic">⚿</span><span>Users</span>
-              </Link>
-            </div>
-          )}
         </nav>
         <div className="side-f">
           Prototype · synthetic data · not a medical device<br />
