@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { readSessionFull, SESSION_COOKIE } from "@/lib/auth/session";
-import { loginStats, sessionInfo } from "@/lib/auth/stats";
+import { sessionInfo } from "@/lib/auth/stats";
 import { Shell } from "@/components/cx/Shell";
 import "./clinical.css";
 
@@ -15,10 +15,9 @@ export default async function ClinicalLayout({ children }: LayoutProps<"/clinica
   const info = await sessionInfo(full?.token);
   if (info.state === "ended") redirect("/api/auth/logout");
   const account = info.state === "ok" ? info.user : full?.account ?? null;
-  const stats = info.state === "ok" ? info.stats : await loginStats();
   return (
     <div className="cx" style={{ flex: 1 }}>
-      <Shell account={account} loginStats={stats}>{children}</Shell>
+      <Shell account={account}>{children}</Shell>
     </div>
   );
 }
