@@ -94,12 +94,6 @@ export function Shell({ children, account, loginStats }: { children: ReactNode; 
               <span className="acct-n"><b>{account.display_name}</b><br />{account.username} · {roleLabel(account.role)}</span>
               <LogoutButton className="acct-out" />
             </div>
-            {loginStats && (
-              <div className="acct-stats" title={`${loginStats.users_logged_in} of ${loginStats.total_users} active users have logged in at least once · ${loginStats.logins_total} log-ins in total · ${loginStats.logins_today} today (India time)`}>
-                <span><b>{loginStats.users_logged_in}</b>/{loginStats.total_users} users logged in</span>
-                <span><b>{loginStats.logins_total}</b> log-ins · <b>{loginStats.logins_today}</b> today</span>
-              </div>
-            )}
           </div>
         )}
         <div className="role">
@@ -117,10 +111,6 @@ export function Shell({ children, account, loginStats }: { children: ReactNode; 
               {myLocations(me).map((l) => <option key={l.id} value={l.id}>{l.name} · {l.city}</option>)}
             </select>
           </div>
-        </div>
-        <div className="who" style={{ paddingTop: 10 }}>
-          <b>{me.role}</b><br />
-          {me.centres.length === 3 ? "All centres" : me.centres.join(", ")} · {me.cls}
         </div>
         <nav className="nav">
           {/* Order: Patient journey, Research, Administration (admins only), then the rest. */}
@@ -146,6 +136,12 @@ export function Shell({ children, account, loginStats }: { children: ReactNode; 
                 <Link href="/clinical/users" className={path.startsWith("/clinical/users") ? "on" : ""}>
                   <span className="ic">⚿</span><span>Users</span>
                 </Link>
+                {loginStats && (
+                  <div className="acct-stats nav-stats" title={`${loginStats.users_logged_in} of ${loginStats.total_users} active users have logged in at least once · ${loginStats.logins_total} log-ins in total · ${loginStats.logins_today} today (India time)`}>
+                    <span><b>{loginStats.users_logged_in}</b>/{loginStats.total_users} users logged in</span>
+                    <span><b>{loginStats.logins_total}</b> log-ins · <b>{loginStats.logins_today}</b> today</span>
+                  </div>
+                )}
               </div>
             )}
             </Fragment>
