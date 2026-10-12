@@ -9,10 +9,15 @@
 
 -- ------------------------------------------------------------------ roles
 
--- Existing rows keep their role (NOT VALID); every new or changed row must use one of these.
+-- Accounts created earlier with another role value become Front office (the narrowest
+-- workspace access); an admin can change them on the Users screen. Then every row must use
+-- one of the seven roles. (Converting first matters: each log-in updates the row, so a
+-- leftover role value would otherwise block that person from logging in.)
 alter table public.app_users drop constraint if exists app_users_role_check;
+update public.app_users set role = 'front_office', updated_at = now()
+where role not in ('front_office', 'nurse', 'doctor', 'research_scientist', 'director', 'medical_records', 'admin');
 alter table public.app_users add constraint app_users_role_check
-  check (role in ('front_office', 'nurse', 'doctor', 'research_scientist', 'director', 'medical_records', 'admin')) not valid;
+  check (role in ('front_office', 'nurse', 'doctor', 'research_scientist', 'director', 'medical_records', 'admin'));
 
 -- ------------------------------------------------------------------ sessions
 

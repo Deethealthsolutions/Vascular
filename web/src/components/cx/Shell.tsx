@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Fragment, useEffect, useRef, type ReactNode } from "react";
+import { createContext, Fragment, useContext, useEffect, useRef, type ReactNode } from "react";
 import { CLIN, NET, PROF, RES, GRAPH, RULES } from "@/lib/cx/data";
 import { audit, clearStore, openPending, resetStore, setState, useStore } from "@/lib/cx/store";
 // Registers the demo-day generator with the store (side-effect import).
@@ -12,12 +12,17 @@ import { currentLocation, hereRegs, myLocations } from "@/lib/cx/locations";
 import { LogoutButton } from "@/components/auth/LogoutButton";
 import type { Account } from "@/lib/auth/session";
 import { isAdmin, roleLabel } from "@/lib/auth/roles";
+import { allowedPaths, PERSONA, seesAll } from "@/lib/auth/access";
 import { LocBadge } from "./LocBadge";
 import { Denied, Toaster } from "./ui";
 
+/** Staff persona fixed by the log-in role (null = the "Preview as" choice in the store). */
+const PersonaCtx = createContext<string | null>(null);
+
 export function useMe() {
   const s = useStore();
-  return staffById(s.user);
+  const fixed = useContext(PersonaCtx);
+  return staffById(fixed ?? s.user);
 }
 
 const NAV: { g: string; items: { s: Screen; href: string; ic: string; label: string; cnt?: (n: ReturnType<typeof useStore>) => number | null; hot?: boolean }[] }[] = [
@@ -63,13 +68,22 @@ function screenOf(path: string): Screen {
 /** `account` is the logged-in user (absent in the single-file HTML export, which has no server). */
 export function Shell({ children, account }: { children: ReactNode; account?: Account | null }) {
   const st = useStore();
-  const me = staffById(st.user);
+  // Most roles work as one fixed persona; admins and directors can preview any of them.
+  const fixed = account && !seesAll(account.role) ? (PERSONA[account.role] ?? null) : null;
+  const me = staffById(fixed ?? st.user);
+  const paths = account ? allowedPaths(account.role) : "all";
+  const visible = (href: string) => paths === "all" || paths.some((p) => href === p || href.startsWith(`${p}/`));
   const path = usePathname();
   const router = useRouter();
   const cur = screenOf(path);
   const here = currentLocation(st, me);
   // Journey counts in the nav are for the location the staff member is working at.
   const stHere = { ...st, registrations: hereRegs(st, me) };
+
+  // Keep the stored persona in step with the log-in role (actions read it when they save).
+  useEffect(() => {
+    if (st.hydrated && fixed && st.user !== fixed) setState(() => ({ user: fixed }));
+  }, [st.hydrated, st.user, fixed]);
 
   function switchUser(id: string) {
     const u = staffById(id);
@@ -95,14 +109,16 @@ export function Shell({ children, account }: { children: ReactNode; account?: Ac
             </div>
           </div>
         )}
-        <div className="role">
-          <div className="role-l" title="Prototype: pick a staff member to see the screens as their role">Acting as (demo role)</div>
-          <div className="role-b">
-            <select aria-label="Signed-in staff member" value={st.user} onChange={(e) => switchUser(e.target.value)}>
-              {STAFF.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
+        {!fixed && (
+          <div className="role">
+            <div className="role-l" title="Pick a staff member to see the screens as their role">{account ? "Preview as (demo role)" : "Acting as (demo role)"}</div>
+            <div className="role-b">
+              <select aria-label="Signed-in staff member" value={st.user} onChange={(e) => switchUser(e.target.value)}>
+                {STAFF.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+            </div>
           </div>
-        </div>
+        )}
         <div className="role" style={{ paddingTop: 10 }}>
           <div className="role-l" style={{ display: "flex", alignItems: "center", gap: 6 }}>Working at <LocBadge id={here.id} size="xs" /></div>
           <div className="role-b">
@@ -113,9 +129,10 @@ export function Shell({ children, account }: { children: ReactNode; account?: Ac
         </div>
         <nav className="nav">
           {/* Order: Patient journey, Research, Administration (admins only), then the rest. */}
-          {NAV.map((g) => (
+          {/* Each log-in role sees only its own screens (lib/auth/access.ts). */}
+          {NAV.map((g) => ({ ...g, items: g.items.filter((it) => visible(it.href)) })).map((g) => (
             <Fragment key={g.g}>
-            <div>
+            {g.items.length > 0 && <div>
               <div className="nav-g">{g.g}</div>
               {g.items.map((it) => {
                 const allowed = canSee(me, it.s);
@@ -128,7 +145,7 @@ export function Shell({ children, account }: { children: ReactNode; account?: Ac
                   </Link>
                 );
               })}
-            </div>
+            </div>}
             {g.g === "Research" && isAdmin(account) && (
               <div>
                 <div className="nav-g">Administration</div>
@@ -154,7 +171,7 @@ export function Shell({ children, account }: { children: ReactNode; account?: Ac
           {" · "}<Link href="/" style={{ color: "#8895a4" }}>Public site</Link>
         </div>
       </aside>
-      <div className="main">{children}</div>
+      <div className="main"><PersonaCtx.Provider value={fixed}>{children}</PersonaCtx.Provider></div>
       <Toaster />
     </div>
   );
@@ -186,7 +203,7 @@ export function Top({ title, sub, right }: { title: ReactNode; sub?: ReactNode; 
 /** Blocks screens the signed-in role may not open, and records the attempt. */
 export function Guard({ screen, children }: { screen: Screen; children: ReactNode }) {
   const st = useStore();
-  const me = staffById(st.user);
+  const me = useMe();
   const ok = canSee(me, screen);
   const logged = useRef<string>("");
   useEffect(() => {

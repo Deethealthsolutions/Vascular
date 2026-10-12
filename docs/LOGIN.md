@@ -27,7 +27,7 @@
 - **Hidden table:** the `app_users` table can't be read with the public key; it has row-level security and no grants. Accounts are managed on the **Users** screen (admins only) or from the Supabase SQL editor.
 - **Database sessions:** each log-in also gets a random session token (only its SHA-256 is stored, in `app_sessions`). The workspace checks it on every full page load, so a session ended by an admin stops working straight away.
 
-**Demo role picker:** the sidebar's **Acting as (demo role)** selector is separate from the log-in. It lets one logged-in person view the screens as any staff role. Linking each account to its own role is the next step.
+**Role-based screens:** each log-in role sees only its own screens (see the table under *Users screen*). Admins and directors can still preview the screens as any demo staff member.
 
 ## Users screen (Admin only)
 
@@ -58,7 +58,22 @@
 - **Sessions end on change:** deactivating someone, resetting their password or changing their role ends their open sessions. Next time they load a page they go to the log-in screen with "Your session has ended".
 - **Change log:** every change is recorded in `app_user_changes` (who, which account, what changed), never the password.
 
-**What a role controls today:** the Users screen. The clinical screens still follow the **Acting as (demo role)** picker; linking each log-in role to the screens it may use is the next step.
+**What each role can open** (`web/src/lib/auth/access.ts`):
+
+| Role | Screens in the sidebar | Lands on | Works as (persona) |
+|---|---|---|---|
+| Doctor | 3 · Doctor consultation | Doctor consultation | Dr. Meera Krishnan |
+| Front office | 1 · Registration | Registration | Kavya R. |
+| Nurse | 2 · Initial nursing assessment | Initial nursing assessment | Sr. Revathi S. |
+| Research scientist | Research workspace, Research documents, Knowledge graph | Research workspace | S. Hariharan |
+| Medical record executive | Registration, Patient master | Registration | Kavya R. |
+| Director | All screens (no Users) | Today's patient flow | Free choice ("Preview as") |
+| Admin | All screens + Users | Today's patient flow | Free choice ("Preview as") |
+
+- **Enforced on the server:** `proxy.ts` checks the role before any `/clinical` or `/staff` page loads. Typing the address of a screen the role can't use sends the person back to their own screen.
+- **Hidden in the sidebar:** screens a role can't use are not shown at all, and empty groups disappear.
+- **Persona:** inside the screens, names on signatures and the finer per-screen checks still come from a demo staff persona. Each role is paired with one persona, and the "Acting as" picker is hidden for it. Admins and directors keep the picker as **Preview as (demo role)**. Giving every account its own name on signatures is the next step.
+- **Old role values:** accounts with a role value from before this list were converted to Front office by the migration.
 
 **Who changed what** (SQL editor):
 ```sql
