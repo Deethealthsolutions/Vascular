@@ -15,6 +15,7 @@ const SCREENS = {
   rdocs: "/clinical/research-docs",
   graph: "/clinical/graph",
   profile: "/clinical/profile",
+  quick: "/clinical/quick-visit",
 } as const;
 
 type ScreenKey = keyof typeof SCREENS;

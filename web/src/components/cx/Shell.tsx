@@ -25,9 +25,11 @@ export function useMe() {
   return staffById(fixed ?? s.user);
 }
 
-const NAV: { g: string; items: { s: Screen; href: string; ic: string; label: string; cnt?: (n: ReturnType<typeof useStore>) => number | null; hot?: boolean }[] }[] = [
+// `server`: needs the running app (log-in + database); hidden in the single-file HTML export.
+const NAV: { g: string; items: { s: Screen; href: string; ic: string; label: string; cnt?: (n: ReturnType<typeof useStore>) => number | null; hot?: boolean; server?: boolean }[] }[] = [
   { g: "Patient journey", items: [
     { s: "flow", href: "/clinical/flow", ic: "⇶", label: "Today's patient flow", cnt: (st) => st.registrations.filter((r) => !["checked out", "admitted", "left without being seen", "sent to emergency"].includes(r.status)).length || null },
+    { s: "quick", href: "/clinical/quick-visit", ic: "⚡", label: "Quick visit (one screen)", server: true },
     { s: "register", href: "/clinical/register", ic: "✚", label: "1 · Registration", cnt: (st) => st.registrations.length || null },
     { s: "triage", href: "/clinical/triage", ic: "♡", label: "2 · Initial nursing assessment", cnt: (st) => st.registrations.filter((r) => r.status === "waiting for assessment" || r.status === "in assessment").length || null, hot: true },
     { s: "consult", href: "/clinical/consult", ic: "⚕", label: "3 · Doctor consultation", cnt: (st) => st.registrations.filter((r) => r.status === "ready for doctor" || r.status === "with doctor").length || null, hot: true },
@@ -72,7 +74,7 @@ export function Shell({ children, account }: { children: ReactNode; account?: Ac
   const fixed = account && !seesAll(account.role) ? (PERSONA[account.role] ?? null) : null;
   const me = staffById(fixed ?? st.user);
   const paths = account ? allowedPaths(account.role) : "all";
-  const visible = (href: string) => paths === "all" || paths.some((p) => href === p || href.startsWith(`${p}/`));
+  const visible = (it: { href: string; server?: boolean }) => (!it.server || !!account) && (paths === "all" || paths.some((p) => it.href === p || it.href.startsWith(`${p}/`)));
   const path = usePathname();
   const router = useRouter();
   const cur = screenOf(path);
@@ -130,7 +132,7 @@ export function Shell({ children, account }: { children: ReactNode; account?: Ac
         <nav className="nav">
           {/* Order: Patient journey, Research, Administration (admins only), then the rest. */}
           {/* Each log-in role sees only its own screens (lib/auth/access.ts). */}
-          {NAV.map((g) => ({ ...g, items: g.items.filter((it) => visible(it.href)) })).map((g) => (
+          {NAV.map((g) => ({ ...g, items: g.items.filter((it) => visible(it)) })).map((g) => (
             <Fragment key={g.g}>
             {g.items.length > 0 && <div>
               <div className="nav-g">{g.g}</div>

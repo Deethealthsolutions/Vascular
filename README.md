@@ -7,6 +7,7 @@ Public-facing platform for a wound care, vascular intervention, limb salvage, di
 - **[docs/PATIENT_JOURNEY.md](docs/PATIENT_JOURNEY.md)**: step-by-step patient journey (registration, initial nursing assessment, doctor consultation, checkout, tests & procedures, admission), rules, statuses and data handed between steps.
 - **[docs/RESEARCH_DOCUMENTS.md](docs/RESEARCH_DOCUMENTS.md)**: research documents register — Supabase setup, register numbers, upload and text scanning, workflow.
 - **[docs/LOGIN.md](docs/LOGIN.md)**: staff log-in — user table, setup, adding and resetting accounts.
+- **[docs/QUICK_VISIT.md](docs/QUICK_VISIT.md)**: Quick visit — the whole outpatient visit on one screen, with returning-patient history and a research-readiness score.
 - **[docs/GAP_ANALYSIS.md](docs/GAP_ANALYSIS.md)**: requirements vs the HTML mockup vs this build, with a demo script.
 - **[web/](web/)**: Next.js 16 + TypeScript + Tailwind 4 app. Currently a clickable prototype running on mock data.
 

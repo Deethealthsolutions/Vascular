@@ -33,7 +33,7 @@ export const staffById = (id: string) => STAFF.find((s) => s.id === id) ?? STAFF
 
 export type Screen =
   | "register" | "triage" | "consult" | "checkout" | "flow" | "admit" | "services" | "rdocs" | "overview" | "round" | "patient" | "visit" | "nurse" | "profile" | "signoff" | "wound"
-  | "research" | "graph" | "audit" | "auto" | "arch" | "requirements";
+  | "research" | "graph" | "audit" | "auto" | "arch" | "requirements" | "quick";
 
 const ALLOW: Record<Screen, Cls[] | "all"> = {
   register: ["frontdesk", "nurse", "consultant"],
@@ -58,6 +58,7 @@ const ALLOW: Record<Screen, Cls[] | "all"> = {
   auto: "all",
   arch: "all",
   requirements: "all",
+  quick: "all",
 };
 
 export function canSee(u: Staff, s: Screen) {
