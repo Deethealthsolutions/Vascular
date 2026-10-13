@@ -28,7 +28,7 @@ const ROLE_ACCESS: Record<string, "all" | ScreenKey[]> = {
   front_office: ["register"],
   nurse: ["triage"],
   research_scientist: ["research", "rdocs", "graph"],
-  medical_records: ["register", "profile"],
+  medical_records: ["register", "profile", "quick"],
 };
 
 /** Staff persona (lib/cx/users.ts) each role works as; null = free choice (admin, director). */

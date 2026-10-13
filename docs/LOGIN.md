@@ -66,7 +66,7 @@
 | Front office | 1 · Registration | Registration | Kavya R. |
 | Nurse | 2 · Initial nursing assessment | Initial nursing assessment | Sr. Revathi S. |
 | Research scientist | Research workspace, Research documents, Knowledge graph | Research workspace | S. Hariharan |
-| Medical record executive | Registration, Patient master | Registration | Kavya R. |
+| Medical record executive | Quick visit, Registration, Patient master | Registration | Kavya R. |
 | Director | All screens (no Users) | Today's patient flow | Free choice ("Preview as") |
 | Admin | All screens + Users | Today's patient flow | Free choice ("Preview as") |
 

@@ -5,8 +5,8 @@
 --
 -- Access: the tables have row-level security on and no grants, so the public key cannot read
 -- them. Every read and write goes through qv_* functions that check the caller's log-in
--- session (app_session_user) and role. Research scientists are not allowed: the records are
--- identifiable; research gets a de-identified extract later.
+-- session (app_session_user) and role: Admin, Director and Medical record executive only.
+-- Research scientists never see these identifiable records; research gets a de-identified extract later.
 
 create sequence if not exists public.qv_patient_seq start 1;
 
@@ -65,7 +65,7 @@ revoke all on sequence public.qv_patient_seq from anon, authenticated;
 
 -- ------------------------------------------------------------------ access check
 
--- The logged-in user, if their role may use Quick visit; raises otherwise.
+-- The logged-in user, if their role may use Quick visit (admin, director, medical records); raises otherwise.
 create or replace function public.qv_caller(p_token text)
 returns public.app_users
 language plpgsql
@@ -77,7 +77,7 @@ declare me public.app_users;
 begin
   me := public.app_session_user(p_token);
   if me.id is null then raise exception 'not_logged_in' using errcode = '42501'; end if;
-  if me.role not in ('admin', 'director', 'doctor', 'nurse', 'front_office', 'medical_records') then
+  if me.role not in ('admin', 'director', 'medical_records') then
     raise exception 'not_allowed' using errcode = '42501';
   end if;
   return me;

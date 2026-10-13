@@ -33,9 +33,12 @@ This is a simple alternative to the step-by-step patient journey (registration â
 
 | Role | Access |
 |---|---|
-| Admin, Director | Sidebar link (they see every screen) |
-| Doctor, Nurse, Front office, Medical record executive | Allowed by the database, but **not in their sidebar yet**: each of these roles currently shows only its one journey screen. To add it, put `"quick"` in that role's list in `web/src/lib/auth/access.ts`. |
-| Research scientist | Not allowed. The records identify patients; research will get a de-identified extract. |
+| Admin | Sidebar link (sees every screen) |
+| Director | Sidebar link (sees every screen) |
+| Medical record executive | Sidebar link, alongside Registration and Patient master |
+| Everyone else (doctor, nurse, front office, research scientist) | No access. The link is hidden, typing the address goes back to their own screen, and the database refuses their calls. |
+
+To change who can use it, update both `web/src/lib/auth/access.ts` (sidebar and address) and the role list in `qv_caller()` in the migration (database).
 
 ## Storage and security
 
