@@ -8,6 +8,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Top, useMe } from "@/components/cx/Shell";
 import { Pill, toast } from "@/components/cx/ui";
+import { uploadPending, WoundPhotos, type Pending, type PhotoMeta } from "./Photos";
 import { currentLocation, locById } from "@/lib/cx/locations";
 import { useStore } from "@/lib/cx/store";
 import {
@@ -90,6 +91,8 @@ export function QuickVisit() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const [setupErr, setSetupErr] = useState("");
+  const [photos, setPhotos] = useState<PhotoMeta[]>([]);      // saved photos of this patient (all visits)
+  const [pending, setPending] = useState<Pending[]>([]);     // new photos for this visit, uploaded on Save
 
   const setPf = <K extends keyof Patient>(k: K, val: Patient[K]) => setP((x) => ({ ...x, [k]: val }));
   const setBg = <K extends keyof Patient["background"]>(k: K, val: Patient["background"][K]) => setP((x) => ({ ...x, background: { ...x.background, [k]: val } }));
@@ -129,16 +132,37 @@ export function QuickVisit() {
     if (!r.ok || !b || "error" in b) return toast((b && "error" in b && b.error) || "Could not open the patient.");
     setP(patientFromSaved(b));
     setHist(b.visits);
+    setPending([]);
+    void loadPhotos(id);
     const editing = visitId ? b.visits.find((x) => x.id === visitId) : undefined;
     setV(editing ? visitFromSaved(editing) : { ...blankVisit(), visit_type: b.visits.length ? "Follow-up" : "New" });
   }
 
+  async function loadPhotos(patientId: string) {
+    const r = await fetch(`/api/quick-visit/photo?patient=${encodeURIComponent(patientId)}`).catch(() => null);
+    const b = r ? await r.json().catch(() => []) : [];
+    setPhotos(r?.ok && Array.isArray(b) ? (b as PhotoMeta[]) : []);
+  }
+
+  async function removePhoto(ph: PhotoMeta) {
+    const reason = prompt("Why remove this photo? (it stays in the audit record)");
+    if (!reason || reason.trim().length < 3) return;
+    const r = await fetch(`/api/quick-visit/photo?id=${encodeURIComponent(ph.id)}&reason=${encodeURIComponent(reason.trim())}`, { method: "DELETE" });
+    const b = await r.json().catch(() => ({}));
+    if (!r.ok) return toast(b.error ?? "Could not remove the photo.");
+    toast("Photo removed from the record.");
+    if (p.id) void loadPhotos(p.id);
+  }
+
   function startNew() {
-    setP(blankPatient()); setV(blankVisit()); setHist([]); setErr(""); setQ("");
+    setP(blankPatient()); setV(blankVisit()); setHist([]); setErr(""); setQ(""); setPhotos([]); setPending([]);
   }
 
   const area = woundArea(v);
-  const ready = useMemo(() => researchReadiness(p, v), [p, v]);
+  const savedHere = v.id ? photos.filter((x) => x.visit_id === v.id) : [];
+  const previousPhotos = photos.filter((x) => x.visit_id !== v.id);
+  const photoCount = savedHere.length + pending.length;
+  const ready = useMemo(() => researchReadiness(p, v, photoCount), [p, v, photoCount]);
   const missing = requiredMissing(p, v);
   const first = [...hist].reverse().find((h) => h.wound_area_cm2 != null);
   const healing = first && area != null && Number(first.wound_area_cm2) > 0 && first.id !== v.id
@@ -146,11 +170,20 @@ export function QuickVisit() {
 
   async function save() {
     setBusy(true); setErr("");
-    const r = await fetch("/api/quick-visit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(toSave(p, v, here.id)) }).catch(() => null);
+    const r = await fetch("/api/quick-visit", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(toSave(p, v, here.id, photoCount)) }).catch(() => null);
     const b = r ? await r.json().catch(() => ({})) : {};
+    if (!r || !r.ok) { setBusy(false); return setErr(b.error ?? "Could not save. Check your connection."); }
+    // Photos upload after the visit exists (they belong to it).
+    const failed = pending.length ? await uploadPending(b.visit_id, pending, [v.side, v.site].filter(Boolean).join(" "), v.photo_consent) : 0;
     setBusy(false);
-    if (!r || !r.ok) return setErr(b.error ?? "Could not save. Check your connection.");
-    toast(`${v.id ? "Visit updated" : "Visit saved"} · ${p.name.trim()} · ${b.patient_no}${ready.score < 100 ? ` · research ${ready.score}%` : " · research-ready"}`);
+    if (failed) {
+      // Keep the screen on this visit so the failed photos can be retried.
+      setErr(`Visit saved, but ${failed} of ${pending.length} photo(s) did not upload. Open the visit from "Earlier visits" and add them again.`);
+      setRecentTick((t) => t + 1);
+      return;
+    }
+    const shots = pending.length ? ` · ${pending.length} photo${pending.length === 1 ? "" : "s"}` : "";
+    toast(`${v.id ? "Visit updated" : "Visit saved"} · ${p.name.trim()} · ${b.patient_no}${shots}${ready.score < 100 ? ` · research ${ready.score}%` : " · research-ready"}`);
     setRecentTick((t) => t + 1);
     startNew();
   }
@@ -270,6 +303,7 @@ export function QuickVisit() {
                   {healing >= 0 && healing < 40 && hist.length >= 2 && <span className="mut"> · under 40% in this time — consider why it is slow</span>}
                 </div>
               )}
+              {v.wound && <WoundPhotos saved={savedHere} pending={pending} setPending={setPending} previous={previousPhotos} onRemoveSaved={(ph) => void removePhoto(ph)} />}
             </Panel>
 
             {/* 6 · circulation */}
@@ -307,6 +341,9 @@ export function QuickVisit() {
                 <F label="Patient agrees to use of this record for research" className="w2" hint="de-identified before it leaves the clinical record">
                   <Tog label="Research consent" value={v.research_consent} options={["Yes", "No", "Not asked"]} onChange={(x) => setVf("research_consent", x)} />
                 </F>
+                <F label="Wound photos may be used for" className="w2" hint="faces and identifying marks must not be in the photo">
+                  <Tog label="Photo consent" value={v.photo_consent} options={["Care only", "Care + research"] as const} onChange={(x) => setVf("photo_consent", x)} />
+                </F>
                 <F label="Study / audit tag" hint="optional, e.g. HBOT-DFU-2026"><input value={v.study} onChange={(e) => setVf("study", e.target.value.toUpperCase().slice(0, 30))} aria-label="Study tag" /></F>
               </div>
             </Panel>
@@ -338,7 +375,7 @@ export function QuickVisit() {
                     <button key={h.id} type="button" className={v.id === h.id ? "on" : ""} onClick={() => void openPatient(p.id!, h.id)} title="Open to view or correct">
                       <b>{fmtDate(h.visit_date)}</b> <span className="mut">· {h.visit_type}{h.location ? ` · ${locById(h.location).short}` : ""}</span><br />
                       {h.diagnoses.length ? h.diagnoses.join(", ") : <span className="mut">no diagnosis recorded</span>}
-                      <br /><span className="mut xs">{h.wound_area_cm2 != null ? `${h.wound_site ?? "wound"} ${h.wound_area_cm2} cm²` : "no wound measured"}{h.wagner != null ? ` · Wagner ${h.wagner}` : ""} · {h.outcome ?? "—"} · by {h.created_by}</span>
+                      <br /><span className="mut xs">{photos.some((x) => x.visit_id === h.id) ? `📷 ${photos.filter((x) => x.visit_id === h.id).length} · ` : ""}{h.wound_area_cm2 != null ? `${h.wound_site ?? "wound"} ${h.wound_area_cm2} cm²` : "no wound measured"}{h.wagner != null ? ` · Wagner ${h.wagner}` : ""} · {h.outcome ?? "—"} · by {h.created_by}</span>
                     </button>
                   ))}
                 </div>

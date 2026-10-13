@@ -35,6 +35,8 @@ export type Visit = {
   rbs: string; bp: string;
   diagnoses: string[]; treatments: string[]; outcome: string; next_review: string; notes: string;
   research_consent: string; study: string;
+  /** What the wound photos may be used for. */
+  photo_consent: "Care only" | "Care + research";
 };
 
 export const blankBackground = (): Background => ({
@@ -55,7 +57,7 @@ export const blankVisit = (): Visit => ({
   id: null, visit_date: todayIst(), visit_type: "New", referred_by: "", complaint: "", complaint_detail: "",
   wound: true, side: "", site: "", length: "", width: "", depth: "", weeks: "", wagner: "", infection: "", probe_bone: false, gangrene: "None",
   pulses: { dpR: "", ptR: "", dpL: "", ptL: "" }, abi_right: "", abi_left: "", rest_pain: false, claudication_m: "",
-  rbs: "", bp: "", diagnoses: [], treatments: [], outcome: "", next_review: "", notes: "", research_consent: "Not asked", study: "",
+  rbs: "", bp: "", diagnoses: [], treatments: [], outcome: "", next_review: "", notes: "", research_consent: "Not asked", study: "", photo_consent: "Care only",
 });
 
 const num = (s: string) => (s.trim() === "" || isNaN(Number(s)) ? null : Number(s));
@@ -76,8 +78,9 @@ export function abiBand(s: string): { label: string; tone: string } | null {
   return { label: "Severe ischaemia", tone: "r" };
 }
 
-/** Core research variables: which are recorded and which are missing (only those that apply). */
-export function researchReadiness(p: Patient, v: Visit): { score: number; missing: string[]; total: number } {
+/** Core research variables (16): which are recorded and which are missing (only those that apply). */
+/** `photos` = wound photos attached to this visit (saved + about to be saved). */
+export function researchReadiness(p: Patient, v: Visit, photos = 0): { score: number; missing: string[]; total: number } {
   const diabetic = p.background.diabetes !== "" && p.background.diabetes !== "No";
   const items: [string, boolean, boolean][] = [
     // [label, applies, recorded]
@@ -89,6 +92,7 @@ export function researchReadiness(p: Patient, v: Visit): { score: number; missin
     ["Wound site and side", v.wound, !!v.site && !!v.side],
     ["Wound size (length × width)", v.wound, woundArea(v) != null],
     ["Wound duration", v.wound, num(v.weeks) != null],
+    ["Wound photo", v.wound, photos > 0],
     ["Wagner grade", v.wound, v.wagner !== ""],
     ["Infection grade", v.wound, !!v.infection],
     ["ABI or all four foot pulses", true, num(v.abi_right) != null || num(v.abi_left) != null || Object.values(v.pulses).every(Boolean)],
@@ -114,8 +118,8 @@ export function requiredMissing(p: Patient, v: Visit): string[] {
 }
 
 /** Payload for qv_save(): research columns pulled out, full form kept in `data`. */
-export function toSave(p: Patient, v: Visit, location: string) {
-  const r = researchReadiness(p, v);
+export function toSave(p: Patient, v: Visit, location: string, photos = 0) {
+  const r = researchReadiness(p, v, photos);
   return {
     patient: { id: p.id, hospital_id: p.hospital_id, name: p.name, sex: p.sex, age_years: p.age_years, dob: p.dob, phone: p.phone, area: p.area, city: p.city, abha: p.abha, background: p.background },
     visit: {
